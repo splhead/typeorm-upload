@@ -11,7 +11,7 @@ interface Balance {
 @EntityRepository(Transaction)
 class TransactionsRepository extends Repository<Transaction> {
   public async getBalance(): Promise<Balance> {
-    const income = await this.createQueryBuilder('transaction')
+    /* const income = await this.createQueryBuilder('transaction')
       .select('SUM(value)', 'sum')
       .where('type = :type', { type: 'income' })
       .getRawOne();
@@ -19,12 +19,35 @@ class TransactionsRepository extends Repository<Transaction> {
     const outcome = await this.createQueryBuilder('transaction')
       .select('SUM(value)', 'sum')
       .where('type = :type', { type: 'outcome' })
-      .getRawOne();
+      .getRawOne(); */
+
+    const transactions = await this.find();
+
+    const { income, outcome } = transactions.reduce(
+      (accumulator, transaction) => {
+        switch (transaction.type) {
+          case 'income':
+            accumulator.income += Number(transaction.value);
+            break;
+          case 'outcome':
+            accumulator.outcome += Number(transaction.value);
+            break;
+          default:
+            break;
+        }
+
+        return accumulator;
+      },
+      {
+        income: 0,
+        outcome: 0,
+      },
+    );
 
     return {
-      income: parseFloat(income.sum),
-      outcome: parseFloat(outcome.sum),
-      total: income.sum - outcome.sum,
+      income,
+      outcome,
+      total: income - outcome,
     };
   }
 }
